@@ -1,86 +1,80 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <memory>
+#include <deque>
 #include <unordered_map>
 #include <stdexcept>
 #include "Node.h"
 
 class Graph {
 private:
+    // owners détient la mémoire ; nodes expose des pointeurs bruts.
+    // unique_ptr => copie interdite, déplacement automatique, pas de fuite.
+    std::vector<std::unique_ptr<Node>> owners;
     std::vector<Node*> nodes;
+    std::unordered_map<std::string, Node*> byName;
 
 public:
-    Graph() {}
+    Graph() = default;
 
-    void addStage(std::string name, int duration) {
-        Node* node = new Node(name, duration);
+    void addStage(const std::string& name, double duration) {
+        if (byName.count(name)) {
+            throw std::runtime_error("Stage dupliqué : " + name);
+        }
+        owners.push_back(std::make_unique<Node>(name, duration));
+        Node* node = owners.back().get();
         nodes.push_back(node);
+        byName[name] = node;
     }
 
-    void addDependency(std::string nodeName, std::string dependencyName) {
-        Node* node = getNode(nodeName);
-        Node* dependency = getNode(dependencyName);
+    void addDependency(const std::string& nodeName, const std::string& dependencyName) {
+        Node* node = requireNode(nodeName);
+        Node* dependency = requireNode(dependencyName);
         node->addDirectDependency(dependency);
+        dependency->addDependent(node);
     }
 
-    Node* getNode(std::string name) {
-        for (Node* node : nodes) {
-            if (node->getName() == name) {
-                return node;
-            }
-        }
-        return nullptr;
+    Node* getNode(const std::string& name) const {
+        auto it = byName.find(name);
+        return it == byName.end() ? nullptr : it->second;
     }
 
-    std::vector<Node*> getNodes() const {
-        return nodes;
+    // Échoue explicitement au lieu de renvoyer nullptr silencieusement
+    Node* requireNode(const std::string& name) const {
+        Node* node = getNode(name);
+        if (!node) throw std::runtime_error("Stage inconnu : " + name);
+        return node;
     }
 
-    // Renvoie, pour un node donné, la liste des nodes qui dépendent DIRECTEMENT de lui
-    // (l'inverse de getDirectDependencies)
-    std::vector<Node*> getDependents(Node* target) const {
-        std::vector<Node*> dependents;
-        for (Node* node : nodes) {
-            for (Node* dep : node->getDirectDependencies()) {
-                if (dep == target) {
-                    dependents.push_back(node);
-                    break;
-                }
-            }
-        }
-        return dependents;
+    const std::vector<Node*>& getNodes() const { return nodes; }
+
+    const std::vector<Node*>& getDependents(Node* target) const {
+        return target->getDependents();
     }
 
-    // Tri topologique (algorithme de Kahn) : garantit qu'un node
-    // n'apparaît qu'après toutes ses dépendances
+    // Tri topologique (Kahn) en O(V+E) grâce à la liste de successeurs
     std::vector<Node*> getTopologicalOrder() const {
-        std::unordered_map<Node*, int> inDegree;
+        std::unordered_map<Node*, std::size_t> inDegree;
+        inDegree.reserve(nodes.size());
         for (Node* node : nodes) {
             inDegree[node] = node->getDirectDependencies().size();
         }
 
-        std::vector<Node*> queue;
+        std::deque<Node*> queue;
         for (Node* node : nodes) {
-            if (inDegree[node] == 0) {
-                queue.push_back(node);
-            }
+            if (inDegree[node] == 0) queue.push_back(node);
         }
 
         std::vector<Node*> order;
+        order.reserve(nodes.size());
         while (!queue.empty()) {
-            Node* current = queue.back();
-            queue.pop_back();
+            Node* current = queue.front();
+            queue.pop_front();
             order.push_back(current);
 
-            for (Node* node : nodes) {
-                for (Node* dep : node->getDirectDependencies()) {
-                    if (dep == current) {
-                        inDegree[node]--;
-                        if (inDegree[node] == 0) {
-                            queue.push_back(node);
-                        }
-                    }
-                }
+            for (Node* dependent : current->getDependents()) {
+                if (--inDegree[dependent] == 0) queue.push_back(dependent);
             }
         }
 

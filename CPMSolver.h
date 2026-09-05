@@ -1,41 +1,47 @@
 #pragma once
 #include <vector>
 #include <algorithm>
-#include <climits>
+#include <cmath>
+#include <limits>
 #include "Graph.h"
 #include "Node.h"
 
 class CPMSolver {
 private:
     Graph* graph;
+    std::vector<Node*> order;   // ordre topologique, calculé une seule fois
+    double projectDuration = 0.0;
+
+    static constexpr double EPS = 1e-9;
 
 public:
-    CPMSolver(Graph* graph) : graph(graph) {}
+    explicit CPMSolver(Graph* graph) : graph(graph) {}
 
     void forwardPass() {
-        std::vector<Node*> order = graph->getTopologicalOrder();
+        projectDuration = 0.0;
         for (Node* node : order) {
-            int earliest = 0;
+            double earliest = 0.0;
             for (Node* dependency : node->getDirectDependencies()) {
-                earliest = std::max(earliest, dependency->getEarliestStartTime() + dependency->getDuration());
+                earliest = std::max(earliest,
+                                    dependency->getEarliestStartTime() + dependency->getDuration());
             }
             node->setEarliestStartTime(earliest);
+            projectDuration = std::max(projectDuration, earliest + node->getDuration());
         }
     }
 
     void backwardPass() {
-        std::vector<Node*> order = graph->getTopologicalOrder();
-        // On parcourt dans l'ordre INVERSE de l'ordre topologique
-        std::reverse(order.begin(), order.end());
-
-        for (Node* node : order) {
-            std::vector<Node*> dependents = graph->getDependents(node);
+        // Parcours dans l'ordre INVERSE de l'ordre topologique
+        for (auto it = order.rbegin(); it != order.rend(); ++it) {
+            Node* node = *it;
+            const std::vector<Node*>& dependents = node->getDependents();
 
             if (dependents.empty()) {
-                // Pas de successeur : le LST = EST (pas de marge imposée par la suite)
-                node->setLatestStartTime(node->getEarliestStartTime());
+                // Un stage terminal peut finir au plus tard à la fin du projet,
+                // pas à son propre EST (sinon les branches courtes ont un slack nul).
+                node->setLatestStartTime(projectDuration - node->getDuration());
             } else {
-                int latest = INT_MAX;
+                double latest = std::numeric_limits<double>::max();
                 for (Node* dependent : dependents) {
                     latest = std::min(latest, dependent->getLatestStartTime() - node->getDuration());
                 }
@@ -46,22 +52,23 @@ public:
 
     void calculateSlack() {
         for (Node* node : graph->getNodes()) {
-            int slack = node->getLatestStartTime() - node->getEarliestStartTime();
-            node->setSlack(slack);
+            node->setSlack(node->getLatestStartTime() - node->getEarliestStartTime());
         }
     }
 
-    std::vector<Node*> getCriticalPath() {
+    double getProjectDuration() const { return projectDuration; }
+
+    // Les nœuds critiques renvoyés dans l'ordre topologique : c'est un vrai chemin
+    std::vector<Node*> getCriticalPath() const {
         std::vector<Node*> criticalPath;
-        for (Node* node : graph->getNodes()) {
-            if (node->getSlack() == 0) {
-                criticalPath.push_back(node);
-            }
+        for (Node* node : order) {
+            if (std::fabs(node->getSlack()) < EPS) criticalPath.push_back(node);
         }
         return criticalPath;
     }
 
     void solve() {
+        order = graph->getTopologicalOrder();
         forwardPass();
         backwardPass();
         calculateSlack();

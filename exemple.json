@@ -1,0 +1,9 @@
+{
+  "stages": [
+    {"name": "checkout", "duration": 2.0, "dependencies": []},
+    {"name": "build", "duration": 5.0, "dependencies": ["checkout"]},
+    {"name": "lint", "duration": 3.0, "dependencies": ["checkout"]},
+    {"name": "test", "duration": 8.0, "dependencies": ["build"]},
+    {"name": "deploy", "duration": 4.0, "dependencies": ["test", "lint"]}
+  ]
+}

@@ -5,30 +5,29 @@
 class Node {
 private:
     std::string name;
-    int duration;
-    std::vector<Node*> directDependencies;
-    int earliestStartTime;
-    int latestStartTime;
-    int slack;
+    double duration;
+    std::vector<Node*> directDependencies;  // prédécesseurs
+    std::vector<Node*> dependents;          // successeurs (maintenu par Graph)
+    double earliestStartTime;
+    double latestStartTime;
+    double slack;
 
 public:
-    Node(std::string name, int duration) : name(name), duration(duration) {
-        earliestStartTime = 0;
-        latestStartTime = 0;
-        slack = 0;
-    }
+    Node(std::string name, double duration)
+        : name(std::move(name)), duration(duration),
+          earliestStartTime(0.0), latestStartTime(0.0), slack(0.0) {}
 
     const std::string& getName() const { return name; }
-    int getDuration() const { return duration; }
+    double getDuration() const { return duration; }
     const std::vector<Node*>& getDirectDependencies() const { return directDependencies; }
-    int getEarliestStartTime() const { return earliestStartTime; }
-    int getLatestStartTime() const { return latestStartTime; }
-    int getSlack() const { return slack; }
+    const std::vector<Node*>& getDependents() const { return dependents; }
+    double getEarliestStartTime() const { return earliestStartTime; }
+    double getLatestStartTime() const { return latestStartTime; }
+    double getSlack() const { return slack; }
 
-    void addDirectDependency(Node* dependency) {
-        directDependencies.push_back(dependency);
-    }
-    void setEarliestStartTime(int time) { earliestStartTime = time; }
-    void setLatestStartTime(int time) { latestStartTime = time; }
-    void setSlack(int s) { slack = s; }
+    void addDirectDependency(Node* dependency) { directDependencies.push_back(dependency); }
+    void addDependent(Node* dependent) { dependents.push_back(dependent); }
+    void setEarliestStartTime(double time) { earliestStartTime = time; }
+    void setLatestStartTime(double time) { latestStartTime = time; }
+    void setSlack(double s) { slack = s; }
 };
