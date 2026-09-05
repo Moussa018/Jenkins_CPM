@@ -22,7 +22,8 @@ jenkins-cpm-optimizer/
 ├── Node.h                  # a single pipeline stage (name, duration, dependencies)
 ├── Graph.h                 # dependency graph + topological sort
 ├── CPMSolver.h              # CPM algorithm (forward/backward pass, slack, critical path)
-├── main.cpp                 # entry point: builds a graph, runs the solver, prints results
+├── main.cpp                # entry point: builds a graph, runs the solver, prints results
+├── JenkinsfileGenerator.h  # building the parallelized CI/CD pipeline from the graph
 ├── scripts/
     └── estimate_durations.py    # queries Jenkins API for real stage durations
 ```
