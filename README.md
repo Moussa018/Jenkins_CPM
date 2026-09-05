@@ -25,8 +25,6 @@ jenkins-cpm-optimizer/
 ├── main.cpp                 # entry point: builds a graph, runs the solver, prints results
 ├── scripts/
     └── estimate_durations.py    # queries Jenkins API for real stage durations
-└── example/
-    └── pipeline.json        # sample output from the Python script
 ```
 
 ## How it works
