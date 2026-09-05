@@ -1,12 +1,11 @@
 ﻿# Jenkins CPM Optimizer
 
-A C++ tool that analyzes a CI/CD pipeline's dependency graph and identifies its
+A tool that analyzes a CI/CD pipeline's dependency graph and identifies its
 **critical path** using the Critical Path Method (CPM) — a classic scheduling
 algorithm. Stages that aren't on the critical path can be safely parallelized,
-reducing total pipeline runtime.
-
-A companion Python script estimates realistic stage durations from Jenkins'
-build history, instead of relying on hardcoded values.
+reducing total pipeline runtime. 
+A Python script estimates realistic stage durations from Jenkins
+build history for future builds.
 
 ## Why
 
@@ -34,20 +33,13 @@ jenkins-cpm-optimizer/
 
 1. **`Node`** stores a stage's name, duration, and direct dependencies.
 2. **`Graph`** holds all nodes and can compute a topological order and reverse
-   dependencies (who depends on a given stage).
+   dependencies.
 3. **`CPMSolver`** runs the two-pass CPM algorithm:
-   - Forward pass → earliest start time (EST) for each stage
-   - Backward pass → latest start time (LST) for each stage
+   - Forward pass → earliest start time for each stage
+   - Backward pass → latest start time for each stage
    - Slack = LST − EST. A stage with slack = 0 is on the critical path.
 4. **`estimate_durations.py`** pulls the last N builds from Jenkins' Pipeline
-   API (`wfapi/describe`) and averages stage durations, instead of guessing.
-
-## Roadmap
-
-- [ ] Read `pipeline.json` directly from `main.cpp` (via `nlohmann/json`)
-- [ ] Generate a parallelized Jenkinsfile snippet from the critical path result
-- [ ] Unit tests with Google Test
-- [ ] Package as a reusable Jenkins pipeline step
+   API and averages stage durations for more accurate time builds.
 
 ## Tech stack
 
